@@ -142,6 +142,7 @@ cdef class NetfilterQueue:
     def __dealloc__(self):
         if self.qh != NULL:
             nfq_destroy_queue(self.qh)
+        self.qh = NULL
         # Don't call nfq_unbind_pf unless you want to disconnect any other 
         # processes using this libnetfilter_queue on this protocol family!
         nfq_close(self.h)
@@ -182,6 +183,24 @@ cdef class NetfilterQueue:
             nfq_handle_packet(self.h, buf, rv)
             with nogil:
                 rv = recv(fd, buf, sizeof(buf), 0)
+
+    cpdef run2(self):
+        "Version of the run method which uses normal socket.recv so that gevent can monkeypatch it"
+        import socket
+        cdef int fd = nfq_fd(self.h)
+        cdef bytearray buf = bytearray(BufferSize)
+        cdef int l
+        cdef object s = socket.fromfd(fd, socket.AF_UNIX, socket.SOCK_STREAM)
+        cdef object recv = s.recv_into
+        try:
+            while True:
+                l = recv(buf)
+                if l >= 0:
+                    nfq_handle_packet(self.h, buf, l)
+                else:
+                    break
+        finally:
+            s.close()
 
 PROTOCOLS = {
     0: "HOPOPT",

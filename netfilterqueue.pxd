@@ -194,4 +194,5 @@ cdef class NetfilterQueue:
     cdef nfq_q_handle *qh # A handle to the queue
     cdef u_int16_t af # Address family
     cdef packet_copy_size # Amount of packet metadata + data copied to buffer
+    cpdef run2(self)
     
