@@ -16,7 +16,7 @@ DEFAULT_MAX_QUEUELEN = 1024
 
 # Packet copying defaults
 DEF MaxPacketSize = 0xFFFF
-DEF BufferSize = 4096
+DEF BufferSize = 65535
 DEF MetadataSize = 80
 DEF MaxCopySize = BufferSize - MetadataSize
 
@@ -191,6 +191,7 @@ cdef class NetfilterQueue:
         cdef bytearray buf = bytearray(BufferSize)
         cdef int l
         cdef object s = socket.fromfd(fd, socket.AF_UNIX, socket.SOCK_STREAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 851968)
         cdef object recv = s.recv_into
         try:
             while True:
@@ -199,6 +200,9 @@ cdef class NetfilterQueue:
                     nfq_handle_packet(self.h, buf, l)
                 else:
                     break
+        except:
+            # We're not reading netlink messages fast enough :(
+            pass
         finally:
             s.close()
 
